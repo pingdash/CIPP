@@ -55,7 +55,7 @@ const Page = () => {
   });
 
   const NextBackupRun = (props) => {
-    const date = new Date(props.date * 1000);
+    const date = new Date(props.date);
     if (isNaN(date)) {
       return "Not Scheduled";
     } else {
@@ -135,6 +135,7 @@ const Page = () => {
       confirmText: "Are you sure you want to restore this backup?",
       relatedQueryKeys: ["BackupList"],
       multiPost: false,
+      hideBulk: true,
     },
     {
       label: "Download Backup",
@@ -188,7 +189,7 @@ const Page = () => {
           <Typography variant="body2" sx={{ mt: 3, px: 3 }}>
             Backups are stored in the storage account associated with your CIPP instance. You can
             download or restore specific points in time from the list below. Enable automatic
-            updates to have CIPP create daily backups.
+            backups to have CIPP create daily backups using the scheduler.
           </Typography>
           {backupList.isSuccess ? (
             <Box sx={{ mt: 3 }}>
