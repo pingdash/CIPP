@@ -26,6 +26,9 @@ export const CippTenantSelector = (props) => {
     url: "/api/listTenants",
     data: { AllTenantSelector: true },
     queryKey: "TenantSelector",
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    keepPreviousData: true,
   });
 
   const [currentTenant, setSelectedTenant] = useState(null);
@@ -58,11 +61,12 @@ export const CippTenantSelector = (props) => {
       settings.handleUpdate({
         currentTenant: currentTenant.value,
       });
+      //if we have a tenantfilter, we add the tenantfilter to the title of the tab/page so its "Tenant - original title".
     }
   }, [currentTenant?.value]);
 
   useEffect(() => {
-    if (tenant && currentTenant?.value) {
+    if (tenant && currentTenant?.value && currentTenant?.value !== "AllTenants") {
       tenantDetails.refetch();
     }
   }, [tenant, offcanvasVisible]);
@@ -77,6 +81,12 @@ export const CippTenantSelector = (props) => {
           ? {
               value: tenant,
               label: `${matchingTenant.displayName} (${tenant})`,
+              addedFields: {
+                defaultDomainName: matchingTenant.defaultDomainName,
+                displayName: matchingTenant.displayName,
+                customerId: matchingTenant.customerId,
+                initialDomainName: matchingTenant.initialDomainName,
+              },
             }
           : {
               value: null,
@@ -183,12 +193,12 @@ export const CippTenantSelector = (props) => {
         actions={[
           {
             label: "M365 Admin Portal",
-            link: `https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID=${currentTenant?.value}&CSDEST=o365admincenter`,
+            link: `https://admin.cloud.microsoft/?delegatedOrg=${currentTenant?.addedFields?.initialDomainName}`,
             icon: <GlobeAltIcon />,
           },
           {
             label: "Exchange Portal",
-            link: `https://admin.exchange.microsoft.com/?landingpage=homepage&form=mac_sidebar&delegatedOrg=${currentTenant?.value}`,
+            link: `https://admin.cloud.microsoft/exchange?delegatedOrg=${currentTenant?.addedFields?.initialDomainName}`,
             icon: <Mail />,
           },
           {
@@ -198,7 +208,7 @@ export const CippTenantSelector = (props) => {
           },
           {
             label: "Teams Portal",
-            link: `https://admin.teams.microsoft.com/?delegatedOrg=${currentTenant?.value}`,
+            link: `https://admin.teams.microsoft.com/?delegatedOrg=${currentTenant?.addedFields?.initialDomainName}`,
             icon: <FilePresent />,
           },
           {
@@ -212,18 +222,19 @@ export const CippTenantSelector = (props) => {
             icon: <Laptop />,
           },
           {
-            label: "Sharepoint Portal",
-            link: `https://admin.microsoft.com/Partner/beginclientsession.aspx?CTID=${currentTenant?.value}&CSDEST=SharePoint`,
+            label: "SharePoint Portal",
+            link: `/api/ListSharePointAdminUrl?tenantFilter=${currentTenant?.value}`,
             icon: <Share />,
+            external: true,
           },
           {
             label: "Security Portal",
-            link: `https://security.microsoft.com/?tid=${currentTenant?.value}`,
+            link: `https://security.microsoft.com/?tid=${currentTenant?.addedFields?.customerId}`,
             icon: <Shield />,
           },
           {
             label: "Compliance Portal",
-            link: `https://compliance.microsoft.com/?tid=${currentTenant?.value}`,
+            link: `https://purview.microsoft.com/?tid=${currentTenant?.addedFields?.customerId}`,
             icon: <ShieldMoon />,
           },
         ]}
