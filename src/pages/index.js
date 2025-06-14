@@ -1,6 +1,7 @@
 import Head from "next/head";
 import { useEffect, useState } from "react";
-import { Box, Container, Grid, Button } from "@mui/material";
+import { Box, Container, Button } from "@mui/material";
+import { Grid } from "@mui/system";
 import { CippInfoBar } from "../components/CippCards/CippInfoBar";
 import { CippChartCard } from "../components/CippCards/CippChartCard";
 import { CippPropertyListCard } from "../components/CippCards/CippPropertyListCard";
@@ -80,7 +81,12 @@ const Page = () => {
       name: "Default Domain",
       data: (
         <>
-          <CippCopyToClipBoard text={organization.data?.verifiedDomains?.[0]?.name} type="chip" />
+          <CippCopyToClipBoard
+            text={
+              organization.data?.verifiedDomains?.find((domain) => domain.isDefault === true)?.name
+            }
+            type="chip"
+          />
         </>
       ),
     },
@@ -90,16 +96,30 @@ const Page = () => {
     },
   ];
 
-  // Helper to get action counts for the current tenant
   function getActionCountsForTenant(standardsData, currentTenant) {
-    if (!standardsData) return { remediateCount: 0, alertCount: 0, reportCount: 0, total: 0 };
+    if (!standardsData) {
+      return {
+        remediateCount: 0,
+        alertCount: 0,
+        reportCount: 0,
+        total: 0,
+      };
+    }
 
-    // Identify which templates apply:
     const applicableTemplates = standardsData.filter((template) => {
-      const tenantInFilter = template?.tenantFilter?.some((tf) => tf.value === currentTenant);
+      const tenantFilterArr = Array.isArray(template?.tenantFilter) ? template.tenantFilter : [];
+      const excludedTenantsArr = Array.isArray(template?.excludedTenants)
+        ? template.excludedTenants
+        : [];
+
+      const tenantInFilter =
+        tenantFilterArr.length > 0 && tenantFilterArr.some((tf) => tf.value === currentTenant);
+
       const allTenantsTemplate =
-        template.tenantFilter?.some((tf) => tf.value === "AllTenants") &&
-        !template.excludedTenants?.some((et) => et.value === currentTenant);
+        tenantFilterArr.some((tf) => tf.value === "AllTenants") &&
+        (excludedTenantsArr.length === 0 ||
+          !excludedTenantsArr.some((et) => et.value === currentTenant));
+
       return tenantInFilter || allTenantsTemplate;
     });
 
@@ -117,8 +137,11 @@ const Page = () => {
     let reportCount = 0;
 
     for (const [, standard] of Object.entries(combinedStandards)) {
-      const actions = standard.action || [];
-      actions?.forEach((actionObj) => {
+      let actions = standard.action || [];
+      if (!Array.isArray(actions)) {
+        actions = [actions];
+      }
+      actions.forEach((actionObj) => {
         if (actionObj?.value === "Remediate") {
           remediateCount++;
         } else if (actionObj?.value === "Alert") {
@@ -130,6 +153,7 @@ const Page = () => {
     }
 
     const total = Object.keys(combinedStandards).length;
+
     return { remediateCount, alertCount, reportCount, total };
   }
 
@@ -149,6 +173,7 @@ const Page = () => {
         label: portal.label,
         target: "_blank",
         link: portal.url.replace(portal.variable, tenantLookup?.[portal.variable]),
+        icon: portal.icon,
       }));
       setPortalMenuItems(menuItems);
     }
@@ -162,20 +187,20 @@ const Page = () => {
       <Box sx={{ flexGrow: 1, py: 4 }}>
         <Container maxWidth={false}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={12}>
+            <Grid size={{ md: 12, xs: 12 }}>
               <CippUniversalSearch />
             </Grid>
-            <Grid item xs={12} md={12}>
+            <Grid size={{ md: 12, xs: 12 }}>
               <BulkActionsMenu
                 buttonName="Portals"
                 actions={PortalMenuItems}
                 disabled={!currentTenantInfo.isSuccess}
               />
             </Grid>
-            <Grid item xs={12} md={12}>
+            <Grid size={{ md: 12, xs: 12 }}>
               <CippInfoBar data={tenantInfo} isFetching={organization.isFetching} />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ md: 4, xs: 12 }}>
               <CippChartCard
                 title="User Statistics"
                 isFetching={dashboard.isFetching || GlobalAdminList.isFetching}
@@ -200,7 +225,7 @@ const Page = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ md: 4, xs: 12 }}>
               <CippChartCard
                 title="Standards Set"
                 isFetching={standards.isFetching}
@@ -210,7 +235,7 @@ const Page = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ md: 4, xs: 12 }}>
               <CippChartCard
                 title="SharePoint Quota"
                 isFetching={sharepoint.isFetching}
@@ -229,7 +254,7 @@ const Page = () => {
             </Grid>
 
             {/* Converted Domain Names to Property List */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ md: 4, xs: 12 }}>
               <CippPropertyListCard
                 title="Domain Names"
                 showDivider={false}
@@ -238,10 +263,10 @@ const Page = () => {
                 propertyItems={organization.data?.verifiedDomains
                   ?.slice(0, domainVisible ? undefined : 3)
                   .map((domain, idx) => ({
-                    label: `Domain`,
+                    label: "",
                     value: domain.name,
                   }))}
-                actions={
+                actionButton={
                   organization.data?.verifiedDomains?.length > 3 && (
                     <Button onClick={() => setDomainVisible(!domainVisible)}>
                       {domainVisible ? "See less" : "See more..."}
@@ -251,7 +276,7 @@ const Page = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ md: 4, xs: 12 }}>
               <CippPropertyListCard
                 showDivider={false}
                 copyItems={true}
@@ -264,7 +289,7 @@ const Page = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ md: 4, xs: 12 }}>
               <CippPropertyListCard
                 copyItems={true}
                 showDivider={false}
