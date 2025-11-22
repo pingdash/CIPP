@@ -2,9 +2,12 @@ import { Layout as DashboardLayout } from "/src/layouts/index.js";
 import { CippTablePage } from "/src/components/CippComponents/CippTablePage.jsx";
 import { Book, LaptopChromebook } from "@mui/icons-material";
 import { GlobeAltIcon, TrashIcon, UserIcon } from "@heroicons/react/24/outline";
+import { PermissionButton } from "/src/utils/permissions.js";
+import { CippPolicyDeployDrawer } from "/src/components/CippComponents/CippPolicyDeployDrawer.jsx";
 
 const Page = () => {
   const pageTitle = "Intune Compliance Policies";
+  const cardButtonPermissions = ["Endpoint.MEM.ReadWrite"];
 
   const actions = [
     {
@@ -12,9 +15,8 @@ const Page = () => {
       type: "POST",
       url: "/api/AddIntuneTemplate",
       data: {
-        TenantFilter: "Tenant",
         ID: "id",
-        URLName: "deviceCompliancePolicies",
+        ODataType: "@odata.type",
       },
       confirmText: "Are you sure you want to create a template based on this policy?",
       icon: <Book />,
@@ -26,7 +28,6 @@ const Page = () => {
       url: "/api/ExecAssignPolicy",
       data: {
         AssignTo: "allLicensedUsers",
-        TenantFilter: "Tenant",
         ID: "id",
         type: "deviceCompliancePolicies",
       },
@@ -40,7 +41,6 @@ const Page = () => {
       url: "/api/ExecAssignPolicy",
       data: {
         AssignTo: "AllDevices",
-        TenantFilter: "Tenant",
         ID: "id",
         type: "deviceCompliancePolicies",
       },
@@ -54,7 +54,6 @@ const Page = () => {
       url: "/api/ExecAssignPolicy",
       data: {
         AssignTo: "AllDevicesAndUsers",
-        TenantFilter: "Tenant",
         ID: "id",
         type: "deviceCompliancePolicies",
       },
@@ -67,7 +66,6 @@ const Page = () => {
       type: "POST",
       url: "/api/RemovePolicy",
       data: {
-        TenantFilter: "Tenant",
         ID: "id",
         URLName: "deviceCompliancePolicies",
       },
@@ -99,10 +97,18 @@ const Page = () => {
         $orderby: "displayName",
         $count: true,
         $expand: "assignments",
+        manualPagination: true,
       }}
       actions={actions}
       offCanvas={offCanvas}
       simpleColumns={simpleColumns}
+      cardButton={
+        <CippPolicyDeployDrawer
+          buttonText="Deploy Policy"
+          requiredPermissions={cardButtonPermissions}
+          PermissionButton={PermissionButton}
+        />
+      }
     />
   );
 };
