@@ -39,6 +39,18 @@ export const CippPropertyListCard = (props) => {
   const firstHalf = propertyItems.slice(0, half);
   const secondHalf = propertyItems.slice(half, propertyItems.length);
 
+  const isLabelPresent = (item) => {
+    return item?.label === "" || item?.label === undefined || item?.label === null;
+  };
+
+  const setPadding = isLabelPresent ? { py: 0.5, px: 3 } : { py: 1.5, px: 3 };
+  const handleActionDisabled = (row, action) => {
+    if (action?.condition) {
+      return !action.condition(row);
+    }
+    return false;
+  };
+
   return (
     <>
       <Card sx={cardSx} {...other}>
@@ -50,12 +62,13 @@ export const CippPropertyListCard = (props) => {
             <PropertyList>
               {isFetching ? (
                 <>
-                  {propertyItems.map((item, index) => (
+                  {Array.from({ length: propertyItems?.length || 3 }).map((_, index) => (
                     <PropertyListItem
-                      key={`${index}-index-PropertyListOffCanvas`}
+                      key={`${index}-skeleton-PropertyListOffCanvas`}
                       align={align}
-                      label={item.label}
+                      label={propertyItems?.[index]?.label || ""}
                       value={<Skeleton width={280} />}
+                      sx={setPadding}
                     />
                   ))}
                 </>
@@ -66,6 +79,7 @@ export const CippPropertyListCard = (props) => {
                     divider={showDivider}
                     copyItems={copyItems}
                     key={`${index}-index-PropertyListOffCanvas`}
+                    sx={setPadding}
                     {...item}
                   />
                 ))
@@ -88,13 +102,17 @@ export const CippPropertyListCard = (props) => {
             >
               <PropertyList>
                 {isFetching ? (
-                  <PropertyListItem
-                    key={"loading-bar"}
-                    align={align}
-                    divider={showDivider}
-                    label="Loading"
-                    value={<Skeleton width={280} />}
-                  />
+                  <>
+                    {Array.from({ length: Math.max(1, firstHalf?.length || 1) }).map((_, index) => (
+                      <PropertyListItem
+                        key={`${index}-skeleton-first`}
+                        align={align}
+                        divider={showDivider}
+                        label=""
+                        value={<Skeleton width={280} />}
+                      />
+                    ))}
+                  </>
                 ) : (
                   firstHalf.map((item, index) => (
                     <PropertyListItem
@@ -108,15 +126,31 @@ export const CippPropertyListCard = (props) => {
                 )}
               </PropertyList>
               <PropertyList>
-                {secondHalf.map((item, index) => (
-                  <PropertyListItem
-                    align={align}
-                    divider={showDivider}
-                    copyItems={copyItems}
-                    key={`${index}-index-PropertyListOffCanvas`}
-                    {...item}
-                  />
-                ))}
+                {isFetching ? (
+                  <>
+                    {Array.from({ length: Math.max(1, secondHalf?.length || 1) }).map(
+                      (_, index) => (
+                        <PropertyListItem
+                          key={`${index}-skeleton-second`}
+                          align={align}
+                          divider={showDivider}
+                          label=""
+                          value={<Skeleton width={280} />}
+                        />
+                      )
+                    )}
+                  </>
+                ) : (
+                  secondHalf.map((item, index) => (
+                    <PropertyListItem
+                      align={align}
+                      divider={showDivider}
+                      copyItems={copyItems}
+                      key={`${index}-index-PropertyListOffCanvas`}
+                      {...item}
+                    />
+                  ))
+                )}
               </PropertyList>
             </Stack>
           )}
@@ -125,21 +159,22 @@ export const CippPropertyListCard = (props) => {
           {actionItems?.length > 0 &&
             actionItems.map((item, index) => (
               <ActionListItem
-                key={`${item.label}-index-ActionList-OffCanvas`}
+                key={`${item.label}-${index}-ActionList-OffCanvas`}
                 icon={<SvgIcon fontSize="small">{item.icon}</SvgIcon>}
                 label={item.label}
-                onClick={
-                  item.link
-                    ? () => window.open(item.link, "_blank")
-                    : () => {
-                        setActionData({
-                          data: data,
-                          action: item,
-                          ready: true,
-                        });
-                        createDialog.handleOpen();
-                      }
-                }
+                onClick={() => {
+                  setActionData({
+                    data: data,
+                    action: item,
+                    ready: true,
+                  });
+                  if (item?.noConfirm) {
+                    item.customFunction(item, data, {});
+                  } else {
+                    createDialog.handleOpen();
+                  }
+                }}
+                disabled={handleActionDisabled(data, item)}
               />
             ))}
         </ActionList>
