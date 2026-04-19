@@ -1,116 +1,163 @@
-import { Layout as DashboardLayout } from "/src/layouts/index.js";
-import { CippTablePage } from "/src/components/CippComponents/CippTablePage.jsx";
-import Link from "next/link";
-import { Button } from "@mui/material";
+import { Layout as DashboardLayout } from '../../../../layouts/index.js'
+import { CippTablePage } from '../../../../components/CippComponents/CippTablePage.jsx'
+import CippExchangeActions from '../../../../components/CippComponents/CippExchangeActions'
+import { CippHVEUserDrawer } from '../../../../components/CippComponents/CippHVEUserDrawer.jsx'
+import { CippSharedMailboxDrawer } from '../../../../components/CippComponents/CippSharedMailboxDrawer.jsx'
+import { Sync, CloudDone, Bolt } from '@mui/icons-material'
+import { Button, SvgIcon, Tooltip, Chip } from '@mui/material'
+import { useSettings } from '../../../../hooks/use-settings'
+import { Stack } from '@mui/system'
+import { useDialog } from '../../../../hooks/use-dialog'
+import { CippApiDialog } from '../../../../components/CippComponents/CippApiDialog'
+import { useState, useEffect } from 'react'
+import { CippQueueTracker } from '../../../../components/CippTable/CippQueueTracker'
 
 const Page = () => {
-  const pageTitle = "Mailboxes";
+  const pageTitle = 'Mailboxes'
+  const currentTenant = useSettings().currentTenant
+  const syncDialog = useDialog()
+  const [syncQueueId, setSyncQueueId] = useState(null)
 
-  // Define actions for mailboxes
-  const actions = [
-    {
-      label: "Edit permissions",
-      link: "/identity/administration/users/user/exchange?userId=[Id]",
-      color: "info",
-    },
-    {
-      label: "Research Compromised Account",
-      link: "/identity/administration/users/user/bec?userId=[UPN]",
-      color: "info",
-    },
-    {
-      label: "Send MFA Push",
-      type: "GET",
-      url: "/api/ExecSendPush",
-      data: {
-        UserEmail: "mail",
-      },
-      confirmText: "Are you sure you want to send an MFA request?",
-    },
-    {
-      label: "Convert to Shared Mailbox",
-      type: "GET",
-      url: "/api/ExecConvertToSharedMailbox",
-      data: {
-        ID: "UPN",
-      },
-      confirmText: "Are you sure you want to convert this mailbox to a shared mailbox?",
-    },
-    {
-      label: "Convert to Room Mailbox",
-      type: "GET",
-      url: "/api/ExecConvertToRoomMailbox",
-      data: {
-        ID: "UPN",
-      },
-      confirmText: "Are you sure you want to convert this mailbox to a room mailbox?",
-    },
-    {
-      label: "Hide from Global Address List",
-      type: "GET",
-      url: "/api/ExecHideFromGAL",
-      data: {
-        ID: "UPN",
-        HidefromGAL: true,
-      },
-      confirmText:
-        "Are you sure you want to hide this mailbox from the global address list? This will not work if the user is AD Synced.",
-    },
-    {
-      label: "Unhide from Global Address List",
-      type: "GET",
-      url: "/api/ExecHideFromGAL",
-      data: {
-        ID: "UPN",
-      },
-      confirmText:
-        "Are you sure you want to unhide this mailbox from the global address list? This will not work if the user is AD Synced.",
-    },
-    {
-      label: "Start Managed Folder Assistant",
-      type: "GET",
-      url: "/api/ExecStartManagedFolderAssistant",
-      data: {
-        ID: "UPN",
-      },
-      confirmText: "Are you sure you want to start the managed folder assistant for this user?",
-    },
-  ];
+  const isAllTenants = currentTenant === 'AllTenants'
+  const [useReportDB, setUseReportDB] = useState(true)
+
+  useEffect(() => {
+    setUseReportDB(true)
+  }, [currentTenant])
 
   // Define off-canvas details
   const offCanvas = {
-    extendedInfoFields: ["displayName", "UPN", "AdditionalEmailAddresses", "recipientTypeDetails"],
-    actions: actions,
-  };
+    extendedInfoFields: ['displayName', 'UPN', 'AdditionalEmailAddresses', 'recipientTypeDetails'],
+    actions: CippExchangeActions(),
+  }
+
+  const filterList = [
+    {
+      filterName: 'View User Mailboxes',
+      value: [{ id: 'recipientTypeDetails', value: 'UserMailbox' }],
+      type: 'column',
+    },
+    {
+      filterName: 'View Shared Mailboxes',
+      value: [{ id: 'recipientTypeDetails', value: 'SharedMailbox' }],
+      type: 'column',
+    },
+    {
+      filterName: 'View Room Mailboxes',
+      value: [{ id: 'recipientTypeDetails', value: 'RoomMailbox' }],
+      type: 'column',
+    },
+    {
+      filterName: 'View Equipment Mailboxes',
+      value: [{ id: 'recipientTypeDetails', value: 'EquipmentMailbox' }],
+      type: 'column',
+    },
+  ]
 
   // Simplified columns for the table
-  const simpleColumns = [
-    "UPN", // User Principal Name
-    "displayName", // Display Name
-    "primarySmtpAddress", // Primary Email Address
-    "recipientType", // Recipient Type
-    "recipientTypeDetails", // Recipient Type Details
-    "AdditionalEmailAddresses", // Additional Email Addresses
-  ];
+  const simpleColumns = isAllTenants
+    ? [
+        'Tenant', // Tenant
+        'displayName', // Display Name
+        'recipientTypeDetails', // Recipient Type Details
+        'UPN', // User Principal Name
+        'primarySmtpAddress', // Primary Email Address
+        'AdditionalEmailAddresses', // Additional Email Addresses
+        'CacheTimestamp', // Cache Timestamp
+      ]
+    : [
+        'displayName', // Display Name
+        'recipientTypeDetails', // Recipient Type Details
+        'UPN', // User Principal Name
+        'primarySmtpAddress', // Primary Email Address
+        'AdditionalEmailAddresses', // Additional Email Addresses
+        'CacheTimestamp', // Cache Timestamp
+      ]
 
   return (
-    <CippTablePage
-      title={pageTitle}
-      apiUrl="/api/ListMailboxes"
-      actions={actions}
-      offCanvas={offCanvas}
-      simpleColumns={simpleColumns}
-      cardButton={
-        <>
-          <Button component={Link} href="/email/administration/mailboxes/addshared">
-            Add Shared Mailbox
-          </Button>
-        </>
-      }
-    />
-  );
-};
+    <>
+      <CippTablePage
+        title={pageTitle}
+        apiUrl={`/api/ListMailboxes${useReportDB ? '?UseReportDB=true' : ''}`}
+        queryKey={`ListMailboxes-${currentTenant}-${useReportDB}`}
+        actions={CippExchangeActions()}
+        offCanvas={offCanvas}
+        simpleColumns={simpleColumns}
+        filters={filterList}
+        cardButton={
+          <Stack direction="row" spacing={1} alignItems="center">
+            <CippSharedMailboxDrawer />
+            <CippHVEUserDrawer />
+            {useReportDB && (
+              <>
+                <CippQueueTracker
+                  queueId={syncQueueId}
+                  queryKey={`ListMailboxes-${currentTenant}`}
+                  title="Mailboxes Sync"
+                />
+                <Button
+                  startIcon={
+                    <SvgIcon fontSize="small">
+                      <Sync />
+                    </SvgIcon>
+                  }
+                  size="xs"
+                  onClick={syncDialog.handleOpen}
+                  disabled={isAllTenants}
+                >
+                  Sync
+                </Button>
+              </>
+            )}
+            <Tooltip
+              title={
+                isAllTenants
+                  ? 'AllTenants always uses cached data'
+                  : useReportDB
+                    ? 'Showing cached data — click to switch to live'
+                    : 'Showing live data — click to switch to cache'
+              }
+            >
+              <span>
+                <Chip
+                  icon={useReportDB ? <CloudDone /> : <Bolt />}
+                  label={useReportDB ? 'Cached' : 'Live'}
+                  color="primary"
+                  size="small"
+                  onClick={isAllTenants ? undefined : () => setUseReportDB((prev) => !prev)}
+                  clickable={!isAllTenants}
+                  disabled={isAllTenants}
+                  variant="outlined"
+                />
+              </span>
+            </Tooltip>
+          </Stack>
+        }
+      />
+      <CippApiDialog
+        createDialog={syncDialog}
+        title="Sync Mailboxes"
+        fields={[]}
+        api={{
+          type: 'GET',
+          url: '/api/ExecCIPPDBCache',
+          confirmText: `Run mailboxes cache sync for ${currentTenant}? This will update mailbox data immediately.`,
+          relatedQueryKeys: [`ListMailboxes-${currentTenant}-true`],
+          data: {
+            Name: 'Mailboxes',
+            Types: 'None',
+          },
+          onSuccess: (response) => {
+            if (response?.Metadata?.QueueId) {
+              setSyncQueueId(response.Metadata.QueueId)
+            }
+          },
+        }}
+      />
+    </>
+  )
+}
 
-Page.getLayout = (page) => <DashboardLayout>{page}</DashboardLayout>;
+Page.getLayout = (page) => <DashboardLayout allTenantsSupport={true}>{page}</DashboardLayout>
 
-export default Page;
+export default Page
