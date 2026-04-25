@@ -1,16 +1,6 @@
-import {
-  Box,
-  Button,
-  IconButton,
-  ListItem,
-  ListItemText,
-  SvgIcon,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { Box, Button, ListItem, ListItemText, Typography } from "@mui/material";
 import { useState } from "react";
-import CopyToClipboard from "react-copy-to-clipboard";
-import { CopyAll } from "@mui/icons-material";
+import { CippCopyToClipBoard } from "./CippComponents/CippCopyToClipboard";
 
 export const PropertyListItem = (props) => {
   const {
@@ -21,19 +11,15 @@ export const PropertyListItem = (props) => {
     value = "",
     type,
     copyItems,
+    sx = {
+      px: 3,
+      py: 1.5,
+    },
     ...other
   } = props;
   const [showPassword, setShowPassword] = useState(false);
   return (
-    <ListItem
-      component={component}
-      disableGutters
-      sx={{
-        px: 3,
-        py: 1.5,
-      }}
-      {...other}
-    >
+    <ListItem component={component} disableGutters sx={sx} {...other}>
       <ListItemText
         disableTypography
         primary={
@@ -61,17 +47,7 @@ export const PropertyListItem = (props) => {
                     )}
                   </>
                 )}
-                {copyItems && (
-                  <CopyToClipboard text={value}>
-                    <Tooltip title="Copy to clipboard">
-                      <IconButton size="small">
-                        <SvgIcon fontSize="5px">
-                          <CopyAll fontSize="small" />
-                        </SvgIcon>
-                      </IconButton>
-                    </Tooltip>
-                  </CopyToClipboard>
-                )}
+                {copyItems && <CippCopyToClipBoard text={value} type="button" />}
               </Typography>
             )}
           </Box>
