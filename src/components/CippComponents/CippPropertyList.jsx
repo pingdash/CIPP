@@ -16,6 +16,11 @@ export const CippPropertyList = (props) => {
   const firstHalf = propertyItems.slice(0, half);
   const secondHalf = propertyItems.slice(half, propertyItems.length);
 
+  const isLabelPresent = (item) => {
+    return item?.label === "" || item?.label === undefined || item?.label === null;
+  };
+
+  const setPadding = isLabelPresent ? { py: 0.5, px: { xs: 2, md: 3 } } : { py: 1.5, px: { xs: 2, md: 3 } };
   return (
     <>
       {layout === "single" ? (
@@ -27,8 +32,8 @@ export const CippPropertyList = (props) => {
                   key={`${index}-index-PropertyListOffCanvas`}
                   align={align}
                   label={item.label}
-                  value={<Skeleton width={280} />}
-                  {...item}
+                  value={<Skeleton sx={{ width: "100%", maxWidth: 280 }} />}
+                  sx={setPadding}
                 />
               ))}
             </>
@@ -39,6 +44,7 @@ export const CippPropertyList = (props) => {
                 divider={showDivider}
                 copyItems={copyItems}
                 key={`${index}-index-PropertyListOffCanvas`}
+                sx={setPadding}
                 {...item}
               />
             ))
@@ -46,7 +52,7 @@ export const CippPropertyList = (props) => {
         </PropertyList>
       ) : (
         // Two-column layout
-        <Stack
+        (<Stack
           direction={{
             md: "column",
             lg: "row",
@@ -68,7 +74,8 @@ export const CippPropertyList = (props) => {
                     key={`${index}-index-PropertyListOffCanvas`}
                     align={align}
                     label={item.label}
-                    value={<Skeleton width={280} />}
+                    value={<Skeleton sx={{ width: "100%", maxWidth: 280 }} />}
+                    sx={setPadding}
                   />
                 ))}
               </>
@@ -79,6 +86,7 @@ export const CippPropertyList = (props) => {
                   divider={showDivider}
                   copyItems={copyItems}
                   key={`${index}-index-PropertyListOffCanvas`}
+                  sx={setPadding}
                   {...item}
                 />
               ))
@@ -92,7 +100,8 @@ export const CippPropertyList = (props) => {
                     key={`${index}-index-PropertyListOffCanvas`}
                     align={align}
                     label={item.label}
-                    value={<Skeleton width={280} />}
+                    value={<Skeleton sx={{ width: "100%", maxWidth: 280 }} />}
+                    sx={setPadding}
                   />
                 ))}
               </>
@@ -103,12 +112,13 @@ export const CippPropertyList = (props) => {
                   divider={showDivider}
                   copyItems={copyItems}
                   key={`${index}-index-PropertyListOffCanvas`}
+                  sx={setPadding}
                   {...item}
                 />
               ))
             )}
           </PropertyList>
-        </Stack>
+        </Stack>)
       )}
     </>
   );

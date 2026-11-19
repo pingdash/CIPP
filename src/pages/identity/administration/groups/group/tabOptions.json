@@ -1,0 +1,12 @@
+[
+  {
+    "label": "View Group",
+    "path": "/identity/administration/groups/group",
+    "icon": "Group"
+  },
+  {
+    "label": "Intune Assignments",
+    "path": "/identity/administration/groups/group/intune-assignments",
+    "icon": "Assignment"
+  }
+]
