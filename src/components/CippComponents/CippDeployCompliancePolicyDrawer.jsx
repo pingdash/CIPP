@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { CippIcons } from "../../utils/icon-registry";
 import { Button, Divider, Stack } from "@mui/material";
 import { Grid } from "@mui/system";
 import { useForm, useFormState, useWatch } from "react-hook-form";
-import { RocketLaunch } from "@mui/icons-material";
 import { CippOffCanvas } from "./CippOffCanvas";
 import CippFormComponent from "./CippFormComponent";
 import { CippFormTenantSelector } from "./CippFormTenantSelector";
@@ -218,9 +218,9 @@ export const CippDeployCompliancePolicyDrawer = ({
   return (
     <>
       <PermissionButton
-        requiredPermissions={requiredPermissions}
+        {...(PermissionButton !== Button ? { requiredPermissions } : {})}
         onClick={() => setDrawerVisible(true)}
-        startIcon={<RocketLaunch />}
+        startIcon={<CippIcons.RocketLaunch />}
       >
         {buttonText ?? config.buttonLabel}
       </PermissionButton>
@@ -230,22 +230,27 @@ export const CippDeployCompliancePolicyDrawer = ({
         onClose={handleCloseDrawer}
         size="lg"
         footer={
-          <Stack direction="row" spacing={2} justifyContent="flex-start">
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSubmit}
-              disabled={deployPolicy.isLoading || !isValid}
-            >
-              {deployPolicy.isLoading
-                ? "Deploying..."
-                : deployPolicy.isSuccess
-                ? "Deploy Another"
-                : "Deploy"}
-            </Button>
-            <Button variant="outlined" onClick={handleCloseDrawer}>
-              Close
-            </Button>
+          <Stack spacing={2}>
+            <CippApiResults apiObject={deployPolicy} />
+            <Stack direction="row" spacing={2} sx={{
+              justifyContent: "flex-start"
+            }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSubmit}
+                disabled={deployPolicy.isPending || !isValid}
+              >
+                {deployPolicy.isPending
+                  ? "Deploying..."
+                  : deployPolicy.isSuccess
+                  ? "Deploy Another"
+                  : "Deploy"}
+              </Button>
+              <Button variant="outlined" onClick={handleCloseDrawer}>
+                Close
+              </Button>
+            </Stack>
           </Stack>
         }
       >
@@ -307,8 +312,6 @@ export const CippDeployCompliancePolicyDrawer = ({
               placeholder={config.placeholder}
             />
           </Grid>
-
-          <CippApiResults apiObject={deployPolicy} />
         </Grid>
       </CippOffCanvas>
     </>

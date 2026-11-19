@@ -1,6 +1,7 @@
 import { Alert, CircularProgress, Stack, Typography } from '@mui/material'
 import { ApiGetCall } from '../../api/ApiCall'
 import CippJsonView from '../CippFormPages/CippJSONView'
+import { isMultiTenant, tenantScope } from '../../utils/tenant-selection'
 
 export const CippIntunePolicyDetails = ({ row, tenant }) => {
   const isConfigurationPolicy = row?.URLName?.toLowerCase() === 'configurationpolicies'
@@ -8,13 +9,13 @@ export const CippIntunePolicyDetails = ({ row, tenant }) => {
   const isSupportedPolicyType = isConfigurationPolicy || isAdministrativeTemplate
   const urlName = isAdministrativeTemplate ? 'groupPolicyConfigurations' : 'configurationPolicies'
   const policyTypeLabel = isAdministrativeTemplate ? 'Administrative Template' : 'Settings Catalog'
-  const tenantFilter = tenant === 'AllTenants' && row?.Tenant ? row.Tenant : tenant
+  const tenantFilter = isMultiTenant(tenant) && row?.Tenant ? row.Tenant : tenant
 
   const policyDetails = ApiGetCall({
     url: '/api/ListIntunePolicy',
     queryKey: `ListIntunePolicyDetails-${urlName}-${tenantFilter}-${row?.id}`,
     data: {
-      TenantFilter: tenantFilter,
+      ...tenantScope(tenantFilter),
       ID: row?.id,
       URLName: urlName,
       IncludeSettingDefinitions: true,
@@ -35,13 +36,21 @@ export const CippIntunePolicyDetails = ({ row, tenant }) => {
 
   if (policyDetails.isLoading || policyDetails.isFetching) {
     return (
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        sx={{
+          alignItems: "center",
+          py: 2
+        }}>
         <CircularProgress size={18} />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Loading policy details and Microsoft descriptions...
         </Typography>
       </Stack>
-    )
+    );
   }
 
   if (policyDetails.isError && !settingsObject) {

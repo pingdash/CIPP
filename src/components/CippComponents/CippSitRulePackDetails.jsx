@@ -1,6 +1,7 @@
 import { Alert, CircularProgress, Stack, Typography } from '@mui/material'
 import { ApiGetCall } from '../../api/ApiCall'
 import { CippCodeBlock } from './CippCodeBlock'
+import { isMultiTenant } from '../../utils/tenant-selection'
 
 // More-info panel for a live custom Sensitive Information Type: looks up its rule pack by RulePackId and
 // shows what it actually detects (parsed configuration + the raw ClassificationRuleCollection XML).
@@ -9,7 +10,7 @@ export const CippSitRulePackDetails = ({ row, tenant }) => {
   // Only classic regex/keyword (Entity) SITs have an inspectable rule configuration.
   const isEntity = row?.Type === 'Entity'
   const shouldShow = isCustom && isEntity
-  const tenantFilter = tenant === 'AllTenants' && row?.Tenant ? row.Tenant : tenant
+  const tenantFilter = isMultiTenant(tenant) && row?.Tenant ? row.Tenant : tenant
 
   const rulePack = ApiGetCall({
     url: '/api/ListSensitiveInfoTypeRulePackage',
@@ -27,13 +28,21 @@ export const CippSitRulePackDetails = ({ row, tenant }) => {
 
   if (rulePack.isLoading || rulePack.isFetching) {
     return (
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        sx={{
+          alignItems: "center",
+          py: 2
+        }}>
         <CircularProgress size={18} />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Looking up rule pack {row?.RulePackId}...
         </Typography>
       </Stack>
-    )
+    );
   }
 
   if (rulePack.isError || !rulePack.data?.Xml) {

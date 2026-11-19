@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Button, Link, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
+import { CippIcons } from "../../utils/icon-registry"
+import { Alert, Button, Link, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from "@mui/material";
 import { Grid } from "@mui/system";
 import { useForm, useWatch } from "react-hook-form";
-import { GroupAdd, Delete } from "@mui/icons-material";
 import { CippOffCanvas } from "./CippOffCanvas";
 import CippFormComponent from "./CippFormComponent";
 import { CippFormLicenseSelector } from "./CippFormLicenseSelector";
@@ -12,6 +12,7 @@ import { useSettings } from "../../hooks/use-settings";
 import { ApiPostCall } from "../../api/ApiCall";
 import { getCippTranslation } from "../../utils/get-cipp-translation";
 import countryList from "../../data/countryList.json";
+import { isMultiTenant } from "../../utils/tenant-selection";
 
 export const CippBulkUserDrawer = ({
   buttonText = "Bulk Add Users",
@@ -21,6 +22,12 @@ export const CippBulkUserDrawer = ({
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [addRowDialogOpen, setAddRowDialogOpen] = useState(false);
   const initialState = useSettings();
+
+  // Bulk user creation targets a single tenant. Under "All Tenants" the tenant does not resolve,
+  // and the Graph write helpers silently no-op while the endpoint still reports success, so guard
+  // the submit rather than letting it appear to succeed while creating nothing.
+  const isAllTenants =
+    !initialState?.currentTenant || isMultiTenant(initialState.currentTenant);
 
   const addedFields = initialState?.defaultAttributes
     ? initialState.userAttributes.map((item) => item.label)
@@ -124,8 +131,9 @@ export const CippBulkUserDrawer = ({
     });
   };
 
-  const handleCloseDrawer = () => {
-    setDrawerVisible(false);
+  // Reset on open as well as close: the page stays mounted across tenant switches, so the
+  // mount-time defaults would otherwise send the request to the previously selected tenant.
+  const resetForm = () => {
     formControl.reset({
       tenantFilter: initialState.currentTenant,
       usageLocation: initialState.usageLocation || "US",
@@ -134,9 +142,19 @@ export const CippBulkUserDrawer = ({
     });
   };
 
+  const handleOpenDrawer = () => {
+    resetForm();
+    setDrawerVisible(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerVisible(false);
+    resetForm();
+  };
+
   const actions = [
     {
-      icon: <Delete />,
+      icon: <CippIcons.Delete />,
       label: "Delete Row",
       confirmText: "Are you sure you want to delete this row?",
       customFunction: handleRemoveItem,
@@ -147,9 +165,9 @@ export const CippBulkUserDrawer = ({
   return (
     <>
       <PermissionButton
-        requiredPermissions={requiredPermissions}
-        onClick={() => setDrawerVisible(true)}
-        startIcon={<GroupAdd />}
+        {...(PermissionButton !== Button ? { requiredPermissions } : {})}
+        onClick={handleOpenDrawer}
+        startIcon={<CippIcons.GroupAdd />}
       >
         {buttonText}
       </PermissionButton>
@@ -159,26 +177,43 @@ export const CippBulkUserDrawer = ({
         onClose={handleCloseDrawer}
         size="lg"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-start" }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSubmit}
-              disabled={createBulkUsers.isLoading || !bulkUserData || bulkUserData.length === 0}
-            >
-              {createBulkUsers.isLoading
-                ? "Creating Users..."
-                : createBulkUsers.isSuccess
-                  ? "Create More Users"
-                  : "Create Users"}
-            </Button>
-            <Button variant="outlined" onClick={handleCloseDrawer}>
-              Close
-            </Button>
-          </div>
+          <Stack spacing={2}>
+            <CippApiResults apiObject={createBulkUsers} />
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-start" }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSubmit}
+                disabled={
+                  isAllTenants ||
+                  createBulkUsers.isPending ||
+                  !bulkUserData ||
+                  bulkUserData.length === 0
+                }
+              >
+                {createBulkUsers.isPending
+                  ? "Creating Users..."
+                  : createBulkUsers.isSuccess
+                    ? "Create More Users"
+                    : "Create Users"}
+              </Button>
+              <Button variant="outlined" onClick={handleCloseDrawer}>
+                Close
+              </Button>
+            </div>
+          </Stack>
         }
       >
         <Grid container spacing={2}>
+          {isAllTenants && (
+            <Grid size={{ xs: 12 }}>
+              <Alert severity="warning">
+                Bulk user creation is single-tenant only. Select a specific tenant using the tenant
+                selector before adding users — with "All Tenants" selected no users will be created.
+              </Alert>
+            </Grid>
+          )}
+
           <Grid size={{ md: 6, xs: 12 }}>
             <CippFormComponent
               type="autoComplete"
@@ -235,8 +270,6 @@ export const CippBulkUserDrawer = ({
               noCard={true}
             />
           </Grid>
-
-          <CippApiResults apiObject={createBulkUsers} />
         </Grid>
 
         <Dialog

@@ -12,10 +12,23 @@ import {
 import { ApiGetCall } from "../../api/ApiCall";
 import { useSettings } from "../../hooks/use-settings.js";
 import { getCippError } from "../../utils/get-cipp-error";
+import { isMultiTenant } from "../../utils/tenant-selection";
+
+const normaliseVariable = (variable) => ({
+  name: variable.name || variable.label || variable.value || variable.variable,
+  variable: variable.variable || variable.value || variable.label,
+  label: variable.label || variable.value || variable.variable,
+  value: variable.value || variable.variable || variable.label,
+  description: variable.description || "",
+  type: variable.type || "schema",
+  category: variable.category || "custom",
+});
 
 /**
  * Autocomplete component specifically for custom variables
  * Shows when user types % in a text field
+ *
+ * customVariables replaces the list CIPP serves; extraVariables is offered on top of it.
  */
 export const CippVariableAutocomplete = React.memo(
   ({
@@ -28,6 +41,7 @@ export const CippVariableAutocomplete = React.memo(
     includeSystemVariables = false,
     position = { top: 0, left: 0 }, // Cursor position for floating box
     customVariables = null,
+    extraVariables = null,
   }) => {
     const theme = useTheme();
     const settings = useSettings();
@@ -52,24 +66,22 @@ export const CippVariableAutocomplete = React.memo(
         return;
       }
 
-      const processedVariables = customVariables.map((variable) => ({
-        name: variable.name || variable.label || variable.value || variable.variable,
-        variable: variable.variable || variable.value || variable.label,
-        label: variable.label || variable.value || variable.variable,
-        value: variable.value || variable.variable || variable.label,
-        description: variable.description || "",
-        type: variable.type || "schema",
-        category: variable.category || "custom",
-      }));
-
-      setVariables(processedVariables);
+      setVariables(customVariables.map(normaliseVariable));
     }, [customVariables, hasCustomVariables]);
+
+    const offeredVariables = useMemo(
+      () =>
+        Array.isArray(extraVariables)
+          ? [...extraVariables.map(normaliseVariable), ...variables]
+          : variables,
+      [extraVariables, variables]
+    );
 
     // Setup API request when component mounts or tenant changes
     useEffect(() => {
       if (open && !hasCustomVariables) {
         // Normalize tenant filter
-        const normalizedTenantFilter = currentTenant === "AllTenants" ? null : currentTenant;
+        const normalizedTenantFilter = isMultiTenant(currentTenant) ? null : currentTenant;
 
         // Build API URL
         let apiUrl = "/api/ListCustomVariables";
@@ -157,20 +169,20 @@ export const CippVariableAutocomplete = React.memo(
     // Filter variables based on search query
     useEffect(() => {
       if (!searchQuery) {
-        setFilteredVariables(variables);
+        setFilteredVariables(offeredVariables);
         setSelectedIndex(0); // Reset selection when filtering
         return;
       }
 
       const lowerQuery = searchQuery.toLowerCase();
-      const filtered = variables.filter(
+      const filtered = offeredVariables.filter(
         (variable) =>
           variable.name?.toLowerCase().includes(lowerQuery) ||
           variable.description?.toLowerCase().includes(lowerQuery)
       );
       setFilteredVariables(filtered);
       setSelectedIndex(0); // Reset selection when filtering
-    }, [searchQuery, variables]);
+    }, [searchQuery, offeredVariables]);
 
     const handleSelect = (event, value) => {
       if (value && onSelect) {
@@ -242,9 +254,16 @@ export const CippVariableAutocomplete = React.memo(
               border: `1px solid ${theme.palette.divider}`,
             }}
           >
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1
+              }}>
               <CircularProgress size={16} />
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{
+                color: "text.secondary"
+              }}>
                 Loading variables...
               </Typography>
             </Box>
@@ -253,7 +272,7 @@ export const CippVariableAutocomplete = React.memo(
       );
     }
 
-    if (!variables || variables.length === 0) {
+    if (offeredVariables.length === 0) {
       return null;
     }
 
@@ -277,8 +296,12 @@ export const CippVariableAutocomplete = React.memo(
             borderRadius: 1,
             maxHeight: 240,
             overflow: "auto",
-            minWidth: 300,
-            maxWidth: 500,
+            // Clamped to the viewport: the Paper shrink-to-fits against unclamped variable
+            // descriptions, and popper.js can only shift a too-wide popper, not shrink it —
+            // at the 500px cap a phone got ~110px hanging off the right edge, scrolling the
+            // whole document sideways.
+            minWidth: "min(300px, calc(100vw - 32px))",
+            maxWidth: "min(500px, calc(100vw - 32px))",
           }}
           onClick={(e) => {
             e.stopPropagation();
@@ -335,13 +358,12 @@ export const CippVariableAutocomplete = React.memo(
                 </Typography>
                 <Typography
                   variant="caption"
-                  color="text.secondary"
                   sx={{
+                    color: "text.secondary",
                     display: "block",
                     mt: 0.25,
-                    fontSize: "0.75rem",
-                  }}
-                >
+                    fontSize: "0.75rem"
+                  }}>
                   {variable.description}
                 </Typography>
               </Box>
